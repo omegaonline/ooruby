@@ -20,6 +20,7 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 #include "./OORuby.h"
+#include "./Module.h"
 
 #ifdef OMEGA_HAVE_VLD
 #include <vld.h>
@@ -34,12 +35,16 @@ static void register_terminator(void (*term_fn)())
 	rb_global_variable(&termHolder);
 }
 
+// The extension exit point
 void Term_OORuby()
 {
+	module_term();
+
 	// Done with Omega
 	Omega::Uninitialize();
 }
 
+// The extension entry point
 extern "C" void OMEGA_EXPORT Init_OORuby()
 {
 	// Call Omega::Initialize safely
@@ -56,5 +61,18 @@ extern "C" void OMEGA_EXPORT Init_OORuby()
 	// Register a terminator
 	register_terminator(Term_OORuby);
 
-	OTL::ObjectPtr<Omega::Apartment::IApartment> ptrApartment = Omega::Apartment::IApartment::Create(Omega::guid_t::Null());
+	try
+	{
+		module_init();
+
+
+	}
+	catch (Omega::IException* pE)
+	{
+		std::string strSrc = pE->Source().ToUTF8();
+		std::string strDesc = pE->Description().ToUTF8();
+		pE->Release();
+
+		rb_fatal("Omega exception returned by Omega::Initialize. %s.  Source: %s",strDesc.c_str(),strSrc.c_str());
+	}
 }
