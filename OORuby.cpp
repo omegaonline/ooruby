@@ -51,8 +51,8 @@ extern "C" void OMEGA_EXPORT Init_OORuby()
 	Omega::IException* pE = Omega::Initialize();
 	if (pE)
 	{
-		std::string strSrc = pE->Source().ToUTF8();
-		std::string strDesc = pE->Description().ToUTF8();
+		std::string strSrc = pE->GetSource().ToUTF8();
+		std::string strDesc = pE->GetDescription().ToUTF8();
 		pE->Release();
 
 		rb_fatal("Omega exception returned by Omega::Initialize. %s.  Source: %s",strDesc.c_str(),strSrc.c_str());
@@ -69,8 +69,8 @@ extern "C" void OMEGA_EXPORT Init_OORuby()
 	}
 	catch (Omega::IException* pE)
 	{
-		std::string strSrc = pE->Source().ToUTF8();
-		std::string strDesc = pE->Description().ToUTF8();
+		std::string strSrc = pE->GetSource().ToUTF8();
+		std::string strDesc = pE->GetDescription().ToUTF8();
 		pE->Release();
 
 		rb_fatal("Omega exception returned by Omega::Initialize. %s.  Source: %s",strDesc.c_str(),strSrc.c_str());

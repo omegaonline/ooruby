@@ -31,8 +31,8 @@ ObjectPtr<Apartment::IApartment> g_ptrApartment;
 
 void throw_exception(IException* pE)
 {
-	std::string strSrc = pE->Source().ToUTF8();
-	std::string strDesc = pE->Description().ToUTF8();
+	std::string strSrc = pE->GetSource().ToUTF8();
+	std::string strDesc = pE->GetDescription().ToUTF8();
 	pE->Release();
 
 	rb_fatal("Omega exception thrown: %s.  Source: %s",strDesc.c_str(),strSrc.c_str());
