@@ -24,7 +24,18 @@
 using namespace Omega;
 using namespace OTL;
 
+#include "./Base.h"
 #include "./Guid.h"
+
+void PSFactory::CreateProxy(const guid_t& iid, TypeInfo::ITypeInfo* pTypeInfo, System::IProxy* pOuter, System::IMarshaller* pManager, IObject*& pProxy)
+{
+	printf("We got a %ls\n",pTypeInfo->GetName().c_str());
+}
+
+System::IStub* PSFactory::CreateStub(const guid_t& iid, TypeInfo::ITypeInfo* pTypeInfo, System::IStubController* pController, System::IMarshaller* pManager, IObject* pObject)
+{
+	return 0;
+}
 
 VALUE obj_IObject;
 

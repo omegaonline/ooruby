@@ -27,6 +27,10 @@ using namespace OTL;
 #include "./Guid.h"
 #include "./Base.h"
 
+// Our library map
+BEGIN_LIBRARY_OBJECT_MAP()
+END_LIBRARY_OBJECT_MAP()
+
 ObjectPtr<Apartment::IApartment> g_ptrApartment;
 
 void throw_exception(IException* pE)
@@ -41,7 +45,8 @@ void throw_exception(IException* pE)
 void module_init()
 {
 	// Create an apartment for all our stuff...
-	g_ptrApartment.Attach(Apartment::IApartment::Create());
+	ObjectPtr<ObjectImpl<PSFactory> > ptrPSFac = ObjectImpl<PSFactory>::CreateInstancePtr();
+	g_ptrApartment.Attach(Apartment::IApartment::Create(ptrPSFac));
 
 	// Define our module
 	VALUE mod_omega = rb_define_module("Omega");
@@ -57,3 +62,4 @@ void module_term()
 {
 	g_ptrApartment.Release();
 }
+
