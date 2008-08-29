@@ -33,6 +33,6 @@ public:
 
 	// IProxyStubFactory members
 public:
-	void CreateProxy(const guid_t& iid, TypeInfo::ITypeInfo* pTypeInfo, System::IProxy* pOuter, System::IMarshaller* pManager, IObject*& pProxy);
-	System::IStub* CreateStub(const guid_t& iid, TypeInfo::ITypeInfo* pTypeInfo, System::IStubController* pController, System::IMarshaller* pManager, IObject* pObject);
+	void CreateProxy(const guid_t& iid, System::IProxy* pOuter, System::IMarshaller* pManager, IObject*& pProxy);
+	System::IStub* CreateStub(const guid_t& iid, System::IStubController* pController, System::IMarshaller* pManager, IObject* pObject);
 };

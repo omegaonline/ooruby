@@ -27,12 +27,46 @@ using namespace OTL;
 #include "./Base.h"
 #include "./Guid.h"
 
-void PSFactory::CreateProxy(const guid_t& iid, TypeInfo::ITypeInfo* pTypeInfo, System::IProxy* pOuter, System::IMarshaller* pManager, IObject*& pProxy)
+namespace OORuby
 {
-	printf("We got a %ls\n",pTypeInfo->GetName().c_str());
+	interface IRubyProxy : public IObject
+	{
+		virtual VALUE get_value() = 0;
+	};
 }
 
-System::IStub* PSFactory::CreateStub(const guid_t& iid, TypeInfo::ITypeInfo* pTypeInfo, System::IStubController* pController, System::IMarshaller* pManager, IObject* pObject)
+// This IID is used to detect a RubyProxy - it has no other purpose
+OMEGA_SET_GUIDOF(OORuby,IRubyProxy,"{23BE9B3B-D795-4413-9B44-F39AFA988098}")
+
+class RubyProxy :
+	public ObjectBase,
+	public OORuby::IRubyProxy
+{
+public:
+	BEGIN_INTERFACE_MAP(RubyProxy)
+		INTERFACE_ENTRY(OORuby::IRubyProxy)
+	END_INTERFACE_MAP()
+
+private:
+	
+// IRubyProxy members
+public:
+	VALUE get_value() { return Qnil; }
+};
+
+void PSFactory::CreateProxy(const guid_t& iid, System::IProxy* pOuter, System::IMarshaller* pManager, IObject*& pProxy)
+{
+	ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
+	ptrTI.Attach(pManager->GetTypeInfo(iid));
+
+	printf("We got a %ls\n",ptrTI->GetName().c_str());
+
+	ObjectPtr<AggregatedObjectImpl<RubyProxy> > ptrProxy = AggregatedObjectImpl<RubyProxy>::CreateInstancePtr(pOuter);
+	
+	pProxy = ptrProxy.AddRef();
+}
+
+System::IStub* PSFactory::CreateStub(const guid_t& iid, System::IStubController* pController, System::IMarshaller* pManager, IObject* pObject)
 {
 	return 0;
 }
@@ -71,8 +105,7 @@ static VALUE object_new_i(int argc, VALUE *argv, VALUE klass)
 	}
 	
 	IObject* pObject = 0;
-	guid_t iid = guid_t::Null();
-	g_ptrApartment->CreateInstance(strURI,flags,pOuter,iid,pObject);
+	g_ptrApartment->CreateInstance(strURI,flags,pOuter,OMEGA_GUIDOF(IObject),pObject);
 	pObject->Release();
 
 	return Qnil;
