@@ -54,23 +54,6 @@ public:
 	VALUE get_value() { return Qnil; }
 };
 
-void PSFactory::CreateProxy(const guid_t& iid, System::IProxy* pOuter, System::IMarshaller* pManager, IObject*& pProxy)
-{
-	ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
-	ptrTI.Attach(pManager->GetTypeInfo(iid));
-
-	printf("We got a %ls\n",ptrTI->GetName().c_str());
-
-	ObjectPtr<AggregatedObjectImpl<RubyProxy> > ptrProxy = AggregatedObjectImpl<RubyProxy>::CreateInstancePtr(pOuter);
-	
-	pProxy = ptrProxy.AddRef();
-}
-
-System::IStub* PSFactory::CreateStub(const guid_t& iid, System::IStubController* pController, System::IMarshaller* pManager, IObject* pObject)
-{
-	return 0;
-}
-
 VALUE obj_IObject;
 
 static VALUE object_qi(VALUE self, VALUE arg) 
@@ -105,8 +88,35 @@ static VALUE object_new_i(int argc, VALUE *argv, VALUE klass)
 	}
 	
 	IObject* pObject = 0;
-	g_ptrApartment->CreateInstance(strURI,flags,pOuter,OMEGA_GUIDOF(IObject),pObject);
-	pObject->Release();
+	g_ptrApartment->CreateInstance(strURI,flags,pOuter,OMEGA_GUIDOF(TypeInfo::IProvideObjectInfo),pObject);
+
+	ObjectPtr<TypeInfo::IProvideObjectInfo> ptrPOI;
+	ptrPOI.Attach(static_cast<TypeInfo::IProvideObjectInfo*>(pObject));
+	pObject = 0;
+
+	IEnumGuid* pEG = ptrPOI->EnumInterfaces();
+	ObjectPtr<IEnumGuid> ptrEG;
+	ptrEG.Attach(static_cast<IEnumGuid*>(pEG));
+
+	ObjectPtr<System::IProxy> ptrProxy(ptrPOI);
+
+	ObjectPtr<System::IMarshaller> ptrMarshaller;
+	ptrMarshaller.Attach(ptrProxy->GetMarshaller());
+
+	// Add each entry in ptrPOI
+	for (;;)
+	{
+		uint32_t count = 1;
+		guid_t iid;
+		ptrEG->Next(count,&iid);
+		if (count==0)
+			break;
+
+		ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
+		ptrTI.Attach(ptrMarshaller->GetTypeInfo(iid));
+		
+		printf("%ls = %ls\n",iid.ToString().c_str(),ptrTI->GetName().c_str());
+	}
 
 	return Qnil;
 }

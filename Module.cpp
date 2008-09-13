@@ -45,8 +45,8 @@ void throw_exception(IException* pE)
 void module_init()
 {
 	// Create an apartment for all our stuff...
-	ObjectPtr<ObjectImpl<PSFactory> > ptrPSFac = ObjectImpl<PSFactory>::CreateInstancePtr();
-	g_ptrApartment.Attach(Apartment::IApartment::Create(ptrPSFac));
+	//ObjectPtr<ObjectImpl<PSFactory> > ptrPSFac = ObjectImpl<PSFactory>::CreateInstancePtr();
+	g_ptrApartment.Attach(Apartment::IApartment::Create());
 
 	// Define our module
 	VALUE mod_omega = rb_define_module("Omega");
