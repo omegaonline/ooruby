@@ -20,3 +20,5 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 void define_basic_interfaces(VALUE mod_omega);
+
+VALUE create_instance(const guid_t& iid, IObject* pObject);

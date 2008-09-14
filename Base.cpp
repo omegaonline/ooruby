@@ -27,116 +27,494 @@ using namespace OTL;
 #include "./Base.h"
 #include "./Guid.h"
 
-namespace OORuby
-{
-	interface IRubyProxy : public IObject
-	{
-		virtual VALUE get_value() = 0;
-	};
-}
+#include <OOCore/Preprocessor/Sequence.h>
 
-// This IID is used to detect a RubyProxy - it has no other purpose
-OMEGA_SET_GUIDOF(OORuby,IRubyProxy,"{23BE9B3B-D795-4413-9B44-F39AFA988098}")
-
-class RubyProxy :
-	public ObjectBase,
-	public OORuby::IRubyProxy
+class OmegaObject
 {
 public:
-	BEGIN_INTERFACE_MAP(RubyProxy)
-		INTERFACE_ENTRY(OORuby::IRubyProxy)
-	END_INTERFACE_MAP()
+	static void DefineBases(VALUE mod_omega);
+	static VALUE Create(const guid_t& iid, IObject* pObject);
 
+	VALUE MethodCall(uint32_t method_idx, int argc, VALUE *argv);
+		
 private:
-	
-// IRubyProxy members
-public:
-	VALUE get_value() { return Qnil; }
+	OmegaObject(const guid_t& iid, System::IProxy* pProxy, System::IMarshaller* pMarshaller, TypeInfo::ITypeInfo* pTypeInfo) :
+		m_iid(iid), m_ptrProxy(pProxy), m_ptrMarshaller(pMarshaller), m_ptrTypeInfo(pTypeInfo)
+	{}
+
+	static void Free(void* p);
+	static VALUE QueryInterface(VALUE self, VALUE arg);
+	static VALUE GetInterfaceClass(const guid_t& iid, TypeInfo::ITypeInfo* pTI, uint32_t& method_offset);
+
+	VALUE ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName, TypeInfo::Types_t type);
+	void WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wchar_t* strName, TypeInfo::Types_t type);
+
+	guid_t                         m_iid;
+	ObjectPtr<System::IProxy>      m_ptrProxy;
+	ObjectPtr<System::IMarshaller> m_ptrMarshaller;
+	ObjectPtr<TypeInfo::ITypeInfo> m_ptrTypeInfo;
+
+	static VALUE                   s_classIObject;
+	static std::map<guid_t,VALUE>  s_mapClasses;
+
+	template <uint32_t I>
+	struct Thunk
+	{
+		static VALUE Call(int argc, VALUE *argv, VALUE self)
+		{
+			OmegaObject* pThis = 0;
+			Data_Get_Struct(self,OmegaObject,pThis);
+
+			try
+			{
+				return pThis->MethodCall(I,argc,argv);
+			}
+			catch (IException* pE)
+			{
+				throw_exception(pE);		
+			}
+		}
+	};
+	typedef VALUE (*ThunkPtr)(int argc, VALUE *argv, VALUE self);
+	static ThunkPtr GetThunk(uint32_t method_idx);
 };
 
-VALUE obj_IObject;
+// The static data
+VALUE OmegaObject::s_classIObject;
+std::map<guid_t,VALUE> OmegaObject::s_mapClasses;
 
-static VALUE object_qi(VALUE self, VALUE arg) 
+// The thunk table
+#define OUTPUT_THUNK(i) &Thunk<i>::Call,
+
+OmegaObject::ThunkPtr OmegaObject::GetThunk(uint32_t method_idx)
 {
-	return Qnil;
-}
-
-static void object_free(void* p) 
-{
-	
-}
-
-static VALUE object_new_i(int argc, VALUE *argv, VALUE klass)
-{
-	// Args: (const string_t& strURI, (optional) Activation::Flags_t flags, (optional) IObject* pOuter)
-	if (argc < 1 || argc > 3)
-		rb_raise(rb_eArgError,"Invalid number of arguments supplied");
-
-	// Sort out URI
-	string_t strURI(STR2CSTR(argv[0]),false);
-	
-	// Sort out flags
-	Activation::Flags_t flags = Activation::Any;
-	if (argc >= 2)
-		flags = static_cast<Activation::Flags_t>(NUM2UINT(argv[1]));
-	
-	// Sort out pOuter
-	IObject* pOuter = 0;
-	if (argc >= 3)
+	static ThunkPtr thunks[] = 
 	{
-		// t = TYPE(argv[2]);
-	}
-	
-	IObject* pObject = 0;
-	g_ptrApartment->CreateInstance(strURI,flags,pOuter,OMEGA_GUIDOF(TypeInfo::IProvideObjectInfo),pObject);
+		OMEGA_REPEAT(OMEGA_MAX_DEFINES,OUTPUT_THUNK)
+		0
+	};
 
-	ObjectPtr<TypeInfo::IProvideObjectInfo> ptrPOI;
-	ptrPOI.Attach(static_cast<TypeInfo::IProvideObjectInfo*>(pObject));
-	pObject = 0;
+	if (method_idx >= OMEGA_MAX_DEFINES)
+		OMEGA_THROW(L"Too many methods in interface!");
 
-	IEnumGuid* pEG = ptrPOI->EnumInterfaces();
-	ObjectPtr<IEnumGuid> ptrEG;
-	ptrEG.Attach(static_cast<IEnumGuid*>(pEG));
+	return thunks[method_idx];
+}
 
-	ObjectPtr<System::IProxy> ptrProxy(ptrPOI);
+VALUE OmegaObject::Create(const guid_t& iid, IObject* pObject)
+{
+	// Confirm we can QI for all the interfaces we need...
+	ObjectPtr<System::IProxy> ptrProxy(pObject);
 
 	ObjectPtr<System::IMarshaller> ptrMarshaller;
 	ptrMarshaller.Attach(ptrProxy->GetMarshaller());
 
-	// Add each entry in ptrPOI
-	for (;;)
-	{
-		uint32_t count = 1;
-		guid_t iid;
-		ptrEG->Next(count,&iid);
-		if (count==0)
-			break;
+	ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
+	ptrTI.Attach(ptrMarshaller->GetTypeInfo(iid));
 
-		ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
-		ptrTI.Attach(ptrMarshaller->GetTypeInfo(iid));
-		
-		printf("%ls = %ls\n",iid.ToString().c_str(),ptrTI->GetName().c_str());
-	}
+	// Get the class
+	uint32_t method_offset = 0;
+	VALUE klass = GetInterfaceClass(iid,ptrTI,method_offset);
+
+	// Now create an instance to hold it...
+	OmegaObject* pObj = 0;
+	OMEGA_NEW(pObj,OmegaObject(iid,ptrProxy,ptrMarshaller,ptrTI));
+	
+	return Data_Wrap_Struct(klass,NULL,&Free,pObj);
+}
+
+VALUE OmegaObject::QueryInterface(VALUE self, VALUE arg) 
+{
+	OmegaObject* pThis = 0;
+	Data_Get_Struct(self,OmegaObject,pThis);
 
 	return Qnil;
 }
 
-static VALUE object_new(int argc, VALUE *argv, VALUE klass)
+void OmegaObject::Free(void* p) 
 {
+	delete static_cast<OmegaObject*>(p);
+}
+
+void OmegaObject::WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wchar_t* strName, TypeInfo::Types_t type)
+{
+	switch (type & TypeInfo::typeMask)
+	{
+	case TypeInfo::typeBool:
+		{
+			bool_t v;
+			if (CLASS_OF(param) == T_TRUE || param == Qtrue)
+				v = true;
+			else if (CLASS_OF(param) == T_FALSE || param == Qfalse)
+				v = false;
+			else
+				v = (NUM2INT(param)==0 ? false : true);
+
+			return pParamsOut->WriteBooleans(strName,1,&v);
+		}
+
+	case TypeInfo::typeByte:
+		{
+			byte_t v = static_cast<byte_t>(NUM2UINT(param));
+			return pParamsOut->WriteBytes(strName,1,&v);
+		}
+
+	case TypeInfo::typeInt16:
+		{
+			int16_t v = static_cast<int16_t>(NUM2UINT(param));
+			return pParamsOut->WriteInt16s(strName,1,&v);
+		}
+
+	case TypeInfo::typeUInt16:
+		{
+			uint16_t v = static_cast<uint16_t>(NUM2UINT(param));
+			return pParamsOut->WriteUInt16s(strName,1,&v);
+		}
+
+	case TypeInfo::typeInt32:
+		{
+			int32_t v = static_cast<int32_t>(NUM2ULONG(param));
+			return pParamsOut->WriteInt32s(strName,1,&v);
+		}
+
+	case TypeInfo::typeUInt32:
+		{
+			uint32_t v = static_cast<uint32_t>(NUM2ULONG(param));
+			return pParamsOut->WriteUInt32s(strName,1,&v);
+		}
+
+	case TypeInfo::typeInt64:
+		{
+			void* BIG_NUM;
+			int64_t v = static_cast<int64_t>(NUM2ULONG(param));
+			return pParamsOut->WriteInt64s(strName,1,&v);
+		}
+
+	case TypeInfo::typeUInt64:
+		{
+			void* BIG_NUM;
+			uint64_t v = static_cast<uint64_t>(NUM2ULONG(param));
+			return pParamsOut->WriteUInt64s(strName,1,&v);
+		}
+
+	case TypeInfo::typeFloat4:
+		{
+			float4_t v = static_cast<float4_t>(NUM2DBL(param));
+			return pParamsOut->WriteFloat4s(strName,1,&v);
+		}
+
+	case TypeInfo::typeFloat8:
+		{
+			float8_t v = static_cast<float8_t>(NUM2DBL(param));
+			return pParamsOut->WriteFloat8s(strName,1,&v);
+		}
+
+	case TypeInfo::typeString:
+		{
+			string_t v(STR2CSTR(param),false);
+			return pParamsOut->WriteStrings(strName,1,&v);
+		}
+
+	case TypeInfo::typeGuid:
+	case TypeInfo::typeObject:
+		{
+			void* TODO;
+			OMEGA_THROW(L"GAH!");
+		}
+
+	case TypeInfo::typeVoid:
+		OMEGA_THROW(L"Attempting to marshall void type!");
+
+	case TypeInfo::typeUnknown:
+	default:
+		OMEGA_THROW(L"Attempting to marshall unknown type!");
+	}
+}
+
+VALUE OmegaObject::ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName, TypeInfo::Types_t type)
+{
+	switch (type & TypeInfo::typeMask)
+	{
+	case TypeInfo::typeBool:
+		{
+			bool_t v;
+			pParamsIn->ReadBooleans(strName,1,&v);
+			return (v == true ? Qtrue : Qfalse);
+		}
+
+	case TypeInfo::typeByte:
+		{
+			byte_t v;
+			pParamsIn->ReadBytes(strName,1,&v);
+			return INT2FIX(v);
+		}
+
+	case TypeInfo::typeInt16:
+		{
+			int16_t v;
+			pParamsIn->ReadInt16s(strName,1,&v);
+			return INT2FIX(v);
+		}
+
+	case TypeInfo::typeUInt16:
+		{
+			uint16_t v;
+			pParamsIn->ReadUInt16s(strName,1,&v);
+			return INT2FIX(v);
+		}
+
+	case TypeInfo::typeInt32:
+		{
+			int32_t v;
+			pParamsIn->ReadInt32s(strName,1,&v);
+			return INT2FIX(v);
+		}
+
+	case TypeInfo::typeUInt32:
+		{
+			uint32_t v;
+			pParamsIn->ReadUInt32s(strName,1,&v);
+			return INT2FIX(v);
+		}
+
+	case TypeInfo::typeInt64:
+		{
+			void* BIG_NUM;
+			int64_t v;
+			pParamsIn->ReadInt64s(strName,1,&v);
+			return INT2FIX(v);
+		}
+
+	case TypeInfo::typeUInt64:
+		{
+			void* BIG_NUM;
+			uint64_t v;
+			pParamsIn->ReadUInt64s(strName,1,&v);
+			return INT2FIX(v);
+		}
+
+	case TypeInfo::typeFloat4:
+		{
+			float4_t v;
+			pParamsIn->ReadFloat4s(strName,1,&v);
+			return rb_float_new(v);
+		}
+
+	case TypeInfo::typeFloat8:
+		{
+			float8_t v;
+			pParamsIn->ReadFloat8s(strName,1,&v);
+			return rb_float_new(v);
+		}
+
+	case TypeInfo::typeString:
+		{
+			string_t v;
+			pParamsIn->ReadStrings(strName,1,&v);
+			return rb_str_new2(v.ToUTF8().c_str());
+		}
+
+	case TypeInfo::typeGuid:
+	case TypeInfo::typeObject:
+		{
+			void* TODO;
+			OMEGA_THROW(L"GAH!");
+		}
+
+	case TypeInfo::typeVoid:
+		OMEGA_THROW(L"Attempting to marshall void type!");
+
+	case TypeInfo::typeUnknown:
+	default:
+		OMEGA_THROW(L"Attempting to marshall unknown type!");
+	}
+}
+
+VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv) 
+{
+	string_t strName;
+	TypeInfo::MethodAttributes_t attribs;
+	uint32_t timeout;
+	byte_t param_count;
+	TypeInfo::Types_t return_type;
+
+	m_ptrTypeInfo->GetMethodInfo(method_idx,strName,attribs,timeout,param_count,return_type);
+
+	if (static_cast<byte_t>(argc) != param_count)
+		rb_raise(rb_eArgError,"Invalid number of arguments supplied. Expected %u, received %d",param_count,argc);
+
+	ObjectPtr<Remoting::IMessage> ptrParamsOut;
+	ptrParamsOut.Attach(m_ptrMarshaller->CreateMessage());
+
+	ptrParamsOut->WriteStructStart(L"ipc_request",L"$ipc_request_type");
+
+	m_ptrProxy->WriteKey(ptrParamsOut);
+	ptrParamsOut->WriteGuids(L"$iid",1,&m_iid);
+	ptrParamsOut->WriteUInt32s(L"$method_id",1,&method_idx);
+	
+	for (byte_t param_idx=0;param_idx<param_count;++param_idx)
+	{
+		string_t strName;
+		TypeInfo::Types_t type;
+		TypeInfo::ParamAttributes_t attribs;
+		m_ptrTypeInfo->GetParamInfo(method_idx,param_idx,strName,type,attribs);
+
+		if (attribs & TypeInfo::attrIn)
+		{
+			if (type & TypeInfo::typeArray)
+			{
+				// Array handling...
+				void* TODO;
+				OMEGA_THROW(L"GAH!");
+			}
+
+			WriteVal(ptrParamsOut,argv[param_idx],strName.c_str(),type);
+		}
+	}
+
+	ptrParamsOut->WriteStructEnd(L"ipc_request");
+
+	Remoting::IMessage* pParamsIn = 0;
+	IException* pE = m_ptrMarshaller->SendAndReceive(attribs,ptrParamsOut,pParamsIn,timeout);
+	if (pE)
+		throw pE;
+
+	ObjectPtr<Remoting::IMessage> ptrParamsIn;
+	ptrParamsIn.Attach(pParamsIn);
+
+	VALUE retval = Qnil;
+	if (!(attribs & TypeInfo::Asynchronous))
+	{
+		if (return_type != TypeInfo::typeVoid)
+			retval = ReadVal(pParamsIn,L"$retval",return_type);
+		
+		for (byte_t param_idx=0;param_idx<param_count;++param_idx)
+		{
+			string_t strName;
+			TypeInfo::Types_t type;
+			TypeInfo::ParamAttributes_t attribs;
+			m_ptrTypeInfo->GetParamInfo(method_idx,param_idx,strName,type,attribs);
+
+			if (attribs & TypeInfo::attrOut)
+			{
+				if (type & TypeInfo::typeArray)
+				{
+					// Array handling...
+					void* TODO;
+					OMEGA_THROW(L"GAH!");
+				}
+
+				argv[param_idx] = ReadVal(pParamsIn,strName.c_str(),type);
+			}
+		}
+	}
+
+	return retval;
+}
+
+VALUE OmegaObject::GetInterfaceClass(const guid_t& iid, TypeInfo::ITypeInfo* pTI, uint32_t& method_offset)
+{
+	// See if we have had is before
 	try
 	{
-		return object_new_i(argc,argv,klass);
+		std::map<guid_t,VALUE>::iterator i = s_mapClasses.find(iid);
+		if (i != s_mapClasses.end())
+			return i->second;
 	}
-	catch (IException* pE)
+	catch (std::exception& e)
 	{
-		throw_exception(pE);		
+		rb_fatal(e.what());
 	}
+
+	// See if we have a base class...
+	VALUE base_type = rb_cObject;
+	{
+		ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
+		ptrTI.Attach(pTI->GetBaseType());
+		if (ptrTI)
+			base_type = GetInterfaceClass(pTI->GetIID(),ptrTI,method_offset);
+		else
+		{
+			// It's IObject...
+			method_offset = 3;
+			return s_classIObject;
+		}
+	}
+
+	// Create all the modules (namespaces)
+	string_t strName = pTI->GetName();
+	size_t start = 0;
+	VALUE module = Qnil;
+	for (;;)
+	{
+		size_t end = strName.Find(L"::",start);
+		if (end == string_t::npos)
+			break;
+
+		string_t strNSpace = strName.Mid(start,end - start);
+		start = end + 2;
+
+		if (module == Qnil)
+			module = rb_define_module(strNSpace.ToUTF8().c_str());
+		else
+			module = rb_define_module_under(module,strNSpace.ToUTF8().c_str());
+	}
+
+	// Now create the class under module
+	VALUE klass = rb_define_class_under(module,strName.Mid(start).ToUTF8().c_str(),base_type);
+	
+	// Now add all the methods...
+	uint32_t methods = pTI->GetMethodCount();
+	for (uint32_t method_idx = method_offset;method_idx<methods;++method_idx)
+	{
+		TypeInfo::MethodAttributes_t attribs;
+		uint32_t timeout;
+		byte_t param_count;
+		TypeInfo::Types_t return_type;
+
+		pTI->GetMethodInfo(method_idx,strName,attribs,timeout,param_count,return_type);
+
+		// Define a method
+		rb_define_method(klass,strName.ToUTF8().c_str(),RUBY_METHOD_FUNC(GetThunk(method_idx)),-1);
+	}
+
+	// Don't let derived classes override these methods...
+	method_offset = methods;
+
+	// Insert it into the map
+	try
+	{
+		s_mapClasses.insert(std::map<guid_t,VALUE>::value_type(iid,klass));
+	}
+	catch (std::exception& e)
+	{
+		rb_fatal(e.what());
+	}
+
+	return klass;
+}
+
+void OmegaObject::DefineBases(VALUE mod_omega)
+{
+	// Define the basic Omega::IObject type
+	s_classIObject = rb_define_class_under(mod_omega,"IObject",rb_cObject);
+	rb_define_method(s_classIObject,"QueryInterface",RUBY_METHOD_FUNC(&OmegaObject::QueryInterface),1);
+
+	try
+	{
+		s_mapClasses.insert(std::map<guid_t,VALUE>::value_type(OMEGA_GUIDOF(IObject),s_classIObject));
+	}
+	catch (std::exception& e)
+	{
+		rb_fatal(e.what());
+	}
+}
+
+VALUE create_instance(const guid_t& iid, IObject* pObject)
+{
+	return OmegaObject::Create(iid,pObject);
 }
 
 void define_basic_interfaces(VALUE mod_omega)
 {
-	// Define the basic Omega::IObject type
-	obj_IObject = rb_define_class_under(mod_omega,"IObject",rb_cObject);
-	rb_define_singleton_method(obj_IObject,"new",RUBY_METHOD_FUNC(&object_new),-1);
-	rb_define_method(obj_IObject,"QueryInterface",RUBY_METHOD_FUNC(&object_qi),1);
+	OmegaObject::DefineBases(mod_omega);
 }
