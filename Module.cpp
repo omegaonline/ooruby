@@ -42,7 +42,7 @@ void throw_exception(IException* pE)
 	rb_fatal("Omega exception thrown: %s.  Source: %s",strDesc.c_str(),strSrc.c_str());
 }
 
-static VALUE omega_createinstance_i(int argc, VALUE *argv, VALUE klass)
+static VALUE omega_createinstance_i(int argc, VALUE *argv)
 {
 	// Args: (const string_t& strURI, (optional) Activation::Flags_t flags, (optional) IObject* pOuter)
 	if (argc < 1 || argc > 3)
@@ -85,11 +85,11 @@ static VALUE omega_createinstance_i(int argc, VALUE *argv, VALUE klass)
 	return create_instance(iid,ptrPOI);
 }
 
-static VALUE omega_createinstance(int argc, VALUE *argv, VALUE klass)
+static VALUE omega_createinstance(int argc, VALUE *argv, VALUE /*klass*/)
 {
 	try
 	{
-		return omega_createinstance_i(argc,argv,klass);
+		return omega_createinstance_i(argc,argv);
 	}
 	catch (IException* pE)
 	{
