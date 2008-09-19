@@ -20,4 +20,5 @@
 ///////////////////////////////////////////////////////////////////////////////////
 
 void define_guid_t(VALUE mod_omega);
-guid_t get_guid(VALUE val);
+guid_t val_to_guid(VALUE val);
+VALUE guid_to_val(const guid_t& g);

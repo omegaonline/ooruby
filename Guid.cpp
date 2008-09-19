@@ -39,23 +39,22 @@ static VALUE guid_t_new(int argc, VALUE *argv, VALUE klass)
 	else if (argc > 1)
 		rb_raise(rb_eArgError,"Invalid number of arguments supplied");
 
-	guid_t* pg = new guid_t();
-	if (!pg)
-		rb_raise(rb_eNoMemError,"Out of memory"); 
-
-	if (argc == 1)
+	try
 	{
-		try
-		{
+		guid_t* pg = 0;
+		OMEGA_NEW(pg,guid_t);
+	
+		if (argc == 1)
 			*pg = guid_t::FromString(strVal);
-		}
-		catch (IException* pE)
-		{
-			throw_exception(pE);
-		}
+		else
+			*pg = guid_t::Null();
+				
+		return Data_Wrap_Struct(klass,0,guid_t_free,pg);
 	}
-		
-	return Data_Wrap_Struct(klass,0,guid_t_free,pg);
+	catch (IException* pE)
+	{
+		throw_exception(pE);
+	}
 }
 
 void define_guid_t(VALUE mod_omega)
@@ -64,10 +63,27 @@ void define_guid_t(VALUE mod_omega)
 	rb_define_singleton_method(obj_guid_t,"new",RUBY_METHOD_FUNC(&guid_t_new),-1);
 }
 
-guid_t get_guid(VALUE val)
+guid_t val_to_guid(VALUE val)
 {
-	if (rb_obj_is_instance_of(val,obj_guid_t) != Qtrue)
+	if (rb_obj_is_kind_of(val,obj_guid_t) != Qtrue)
 		rb_raise(rb_eTypeError,"%s is not a Omega::Guid",rb_obj_classname(val));
 
 	return *(guid_t*)DATA_PTR(val);	
+}
+
+VALUE guid_to_val(const guid_t& g)
+{
+	try
+	{
+		guid_t* pg = 0;
+		OMEGA_NEW(pg,guid_t);
+	
+		*pg = guid_t::Null();
+				
+		return Data_Wrap_Struct(obj_guid_t,0,guid_t_free,pg);
+	}
+	catch (IException* pE)
+	{
+		throw_exception(pE);
+	}
 }

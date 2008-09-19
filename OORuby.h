@@ -46,6 +46,10 @@
 
 #include "ruby.h"
 
+#if !defined(HAVE_LONG_LONG)
+#error Your platform has no support for 64-bit numbers
+#endif
+
 // End of Ruby includes
 /////////////////////////////////////////////////
 

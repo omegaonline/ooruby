@@ -184,15 +184,13 @@ void OmegaObject::WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wc
 
 	case TypeInfo::typeInt64:
 		{
-			void* BIG_NUM;
-			int64_t v = static_cast<int64_t>(NUM2ULONG(param));
+			int64_t v = static_cast<int64_t>(NUM2LL(param));
 			return pParamsOut->WriteInt64s(strName,1,&v);
 		}
 
 	case TypeInfo::typeUInt64:
 		{
-			void* BIG_NUM;
-			uint64_t v = static_cast<uint64_t>(NUM2ULONG(param));
+			uint64_t v = static_cast<uint64_t>(NUM2ULL(param));
 			return pParamsOut->WriteUInt64s(strName,1,&v);
 		}
 
@@ -215,10 +213,18 @@ void OmegaObject::WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wc
 		}
 
 	case TypeInfo::typeGuid:
+		{
+			guid_t v = val_to_guid(param);
+			return pParamsOut->WriteGuids(strName,1,&v);
+		}
+
 	case TypeInfo::typeObject:
 		{
+			if (rb_obj_is_kind_of(param,s_classIObject) != Qtrue)
+				rb_raise(rb_eTypeError,"%s is not derived from Omega::IObject",rb_obj_classname(param));
+				
 			void* TODO;
-			OMEGA_THROW(L"GAH!");
+			break;
 		}
 
 	case TypeInfo::typeVoid:
@@ -245,51 +251,49 @@ VALUE OmegaObject::ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName
 		{
 			byte_t v;
 			pParamsIn->ReadBytes(strName,1,&v);
-			return INT2FIX(v);
+			return INT2NUM(v);
 		}
 
 	case TypeInfo::typeInt16:
 		{
 			int16_t v;
 			pParamsIn->ReadInt16s(strName,1,&v);
-			return INT2FIX(v);
+			return INT2NUM(v);
 		}
 
 	case TypeInfo::typeUInt16:
 		{
 			uint16_t v;
 			pParamsIn->ReadUInt16s(strName,1,&v);
-			return INT2FIX(v);
+			return UINT2NUM(v);
 		}
 
 	case TypeInfo::typeInt32:
 		{
 			int32_t v;
 			pParamsIn->ReadInt32s(strName,1,&v);
-			return INT2FIX(v);
+			return LONG2NUM(v);
 		}
 
 	case TypeInfo::typeUInt32:
 		{
 			uint32_t v;
 			pParamsIn->ReadUInt32s(strName,1,&v);
-			return INT2FIX(v);
+			return ULONG2NUM(v);
 		}
 
 	case TypeInfo::typeInt64:
 		{
-			void* BIG_NUM;
 			int64_t v;
 			pParamsIn->ReadInt64s(strName,1,&v);
-			return INT2FIX(v);
+			return LL2NUM(v);
 		}
 
 	case TypeInfo::typeUInt64:
 		{
-			void* BIG_NUM;
 			uint64_t v;
 			pParamsIn->ReadUInt64s(strName,1,&v);
-			return INT2FIX(v);
+			return ULL2NUM(v);
 		}
 
 	case TypeInfo::typeFloat4:
@@ -314,6 +318,12 @@ VALUE OmegaObject::ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName
 		}
 
 	case TypeInfo::typeGuid:
+		{
+			guid_t v;
+			pParamsIn->ReadGuids(strName,1,&v);
+			return guid_to_val(v);
+		}
+
 	case TypeInfo::typeObject:
 		{
 			void* TODO;
@@ -339,9 +349,6 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 
 	m_ptrTypeInfo->GetMethodInfo(method_idx,strName,attribs,timeout,param_count,return_type);
 
-	if (static_cast<byte_t>(argc) != param_count)
-		rb_raise(rb_eArgError,"Invalid number of arguments supplied. Expected %u, received %d",param_count,argc);
-
 	ObjectPtr<Remoting::IMessage> ptrParamsOut;
 	ptrParamsOut.Attach(m_ptrMarshaller->CreateMessage());
 
@@ -351,6 +358,8 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 	ptrParamsOut->WriteGuids(L"$iid",1,&m_iid);
 	ptrParamsOut->WriteUInt32s(L"$method_id",1,&method_idx);
 	
+	int ret_count = (return_type == TypeInfo::typeVoid ? 0 : 1);
+	int cur_arg = 0;
 	for (byte_t param_idx=0;param_idx<param_count;++param_idx)
 	{
 		string_t strName;
@@ -360,6 +369,9 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 
 		if (attribs & TypeInfo::attrIn)
 		{
+			if (cur_arg == argc)
+				rb_raise(rb_eArgError,"Invalid number of arguments supplied.");
+
 			if (type & TypeInfo::typeArray)
 			{
 				// Array handling...
@@ -367,8 +379,11 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 				OMEGA_THROW(L"GAH!");
 			}
 
-			WriteVal(ptrParamsOut,argv[param_idx],strName.c_str(),type);
+			WriteVal(ptrParamsOut,argv[cur_arg++],strName.c_str(),type);
 		}
+		
+		if (attribs & TypeInfo::attrOut)
+			++ret_count;
 	}
 
 	ptrParamsOut->WriteStructEnd(L"ipc_request");
@@ -382,11 +397,22 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 	ptrParamsIn.Attach(pParamsIn);
 
 	VALUE retval = Qnil;
+	if (ret_count == 0)
+		return retval;
+	else if (ret_count > 1)
+		retval = rb_ary_new2(ret_count);
+
 	if (!(attribs & TypeInfo::Asynchronous))
 	{
 		if (return_type != TypeInfo::typeVoid)
-			retval = ReadVal(pParamsIn,L"$retval",return_type);
-		
+		{
+			VALUE v = ReadVal(pParamsIn,L"$retval",return_type);
+			if (ret_count == 1)
+				retval = v;
+			else
+				rb_ary_push(retval,v);
+		}
+				
 		for (byte_t param_idx=0;param_idx<param_count;++param_idx)
 		{
 			string_t strName;
@@ -396,14 +422,20 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 
 			if (attribs & TypeInfo::attrOut)
 			{
+				VALUE v = Qnil;
 				if (type & TypeInfo::typeArray)
 				{
 					// Array handling...
 					void* TODO;
 					OMEGA_THROW(L"GAH!");
 				}
+				else
+					v = ReadVal(pParamsIn,strName.c_str(),type);
 
-				argv[param_idx] = ReadVal(pParamsIn,strName.c_str(),type);
+				if (ret_count == 1)
+					retval = v;
+				else
+					rb_ary_push(retval,v);
 			}
 		}
 	}
