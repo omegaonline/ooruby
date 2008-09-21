@@ -76,10 +76,8 @@ VALUE guid_to_val(const guid_t& g)
 	try
 	{
 		guid_t* pg = 0;
-		OMEGA_NEW(pg,guid_t);
+		OMEGA_NEW(pg,guid_t(g));
 	
-		*pg = guid_t::Null();
-				
 		return Data_Wrap_Struct(obj_guid_t,0,guid_t_free,pg);
 	}
 	catch (IException* pE)
