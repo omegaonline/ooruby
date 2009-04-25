@@ -62,8 +62,8 @@ private:
 	{
 		static VALUE Call(int argc, VALUE *argv, VALUE self)
 		{
-			OmegaObject* pThis = 0;
-			Data_Get_Struct(self,OmegaObject,pThis);
+			Check_Type(self, T_DATA);
+			OmegaObject* pThis = (OmegaObject*)DATA_PTR(self);
 
 			try
 			{
@@ -124,8 +124,8 @@ VALUE OmegaObject::Create(const guid_t& iid, IObject* pObject)
 
 VALUE OmegaObject::QueryInterface(VALUE self, VALUE arg) 
 {
-	OmegaObject* pThis = 0;
-	Data_Get_Struct(self,OmegaObject,pThis);
+	Check_Type(self, T_DATA);
+	OmegaObject* pThis = (OmegaObject*)DATA_PTR(self);
 
 	return Qnil;
 }

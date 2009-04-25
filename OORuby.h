@@ -32,7 +32,7 @@
 
 /////////////////////////////////////////////////
 // Include Windows components
-#if defined(OMEGA_WIN32)
+#if defined(_WIN32)
 
 // Force Ruby to use the winsock2 definitions
 #include <winsock2.h>
