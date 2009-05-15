@@ -100,7 +100,6 @@ static VALUE omega_createinstance(int argc, VALUE *argv, VALUE /*klass*/)
 void module_init()
 {
 	// Create an apartment for all our stuff...
-	//ObjectPtr<ObjectImpl<PSFactory> > ptrPSFac = ObjectImpl<PSFactory>::CreateInstancePtr();
 	g_ptrApartment.Attach(Apartment::IApartment::Create());
 
 	// Define our module
