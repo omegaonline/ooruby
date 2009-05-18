@@ -42,8 +42,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\include;C:\Ruby2\src\ruby-1.8.6-p287"
-				PreprocessorDefinitions="HAVE_VLD_H"
+				AdditionalIncludeDirectories="..\..\include"
+				PreprocessorDefinitions=""
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
