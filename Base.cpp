@@ -38,21 +38,21 @@ public:
 	VALUE MethodCall(uint32_t method_idx, int argc, VALUE *argv);
 		
 private:
-	OmegaObject(const guid_t& iid, System::IProxy* pProxy, System::IMarshaller* pMarshaller, TypeInfo::ITypeInfo* pTypeInfo) :
-		m_iid(iid), m_ptrProxy(pProxy), m_ptrMarshaller(pMarshaller), m_ptrTypeInfo(pTypeInfo)
+	OmegaObject(const guid_t& iid, System::IProxy* pProxy, System::IMarshaller* pMarshaller, TypeInfo::IInterfaceInfo* pInfo) :
+		m_iid(iid), m_ptrProxy(pProxy), m_ptrMarshaller(pMarshaller), m_ptrInfo(pInfo)
 	{}
 
 	static void Free(void* p);
 	static VALUE QueryInterface(VALUE self, VALUE arg);
-	static VALUE GetInterfaceClass(const guid_t& iid, TypeInfo::ITypeInfo* pTI, uint32_t& method_offset);
+	static VALUE GetInterfaceClass(const guid_t& iid, TypeInfo::IInterfaceInfo* pII, uint32_t& method_offset);
 
 	VALUE ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName, TypeInfo::Types_t type);
 	void WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wchar_t* strName, TypeInfo::Types_t type);
 
-	guid_t                         m_iid;
-	ObjectPtr<System::IProxy>      m_ptrProxy;
-	ObjectPtr<System::IMarshaller> m_ptrMarshaller;
-	ObjectPtr<TypeInfo::ITypeInfo> m_ptrTypeInfo;
+	guid_t                              m_iid;
+	ObjectPtr<System::IProxy>           m_ptrProxy;
+	ObjectPtr<System::IMarshaller>      m_ptrMarshaller;
+	ObjectPtr<TypeInfo::IInterfaceInfo> m_ptrInfo;
 
 	static VALUE                   s_classIObject;
 	static std::map<guid_t,VALUE>  s_mapClasses;
@@ -108,8 +108,8 @@ VALUE OmegaObject::Create(const guid_t& iid, IObject* pObject)
 	ObjectPtr<System::IMarshaller> ptrMarshaller;
 	ptrMarshaller.Attach(ptrProxy->GetMarshaller());
 
-	ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
-	ptrTI.Attach(ptrMarshaller->GetTypeInfo(iid));
+	ObjectPtr<TypeInfo::IInterfaceInfo> ptrII;
+	ptrII.Attach(ptrMarshaller->GetInterfaceInfo(iid));
 
 	// Get the class
 	uint32_t method_offset = 0;
@@ -443,7 +443,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 	return retval;
 }
 
-VALUE OmegaObject::GetInterfaceClass(const guid_t& iid, TypeInfo::ITypeInfo* pTI, uint32_t& method_offset)
+VALUE OmegaObject::GetInterfaceClass(const guid_t& iid, TypeInfo::IInterfaceInfo* pII, uint32_t& method_offset)
 {
 	// See if we have had is before
 	try
@@ -460,10 +460,10 @@ VALUE OmegaObject::GetInterfaceClass(const guid_t& iid, TypeInfo::ITypeInfo* pTI
 	// See if we have a base class...
 	VALUE base_type = rb_cObject;
 	{
-		ObjectPtr<TypeInfo::ITypeInfo> ptrTI;
-		ptrTI.Attach(pTI->GetBaseType());
-		if (ptrTI)
-			base_type = GetInterfaceClass(pTI->GetIID(),ptrTI,method_offset);
+		ObjectPtr<TypeInfo::IInterfaceInfo> ptrII;
+		ptrII.Attach(pII->GetBaseType());
+		if (ptrII)
+			base_type = GetInterfaceClass(pII->GetIID(),ptrII,method_offset);
 		else
 		{
 			// It's IObject...
