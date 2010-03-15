@@ -27,7 +27,7 @@ using namespace OTL;
 #include "./Base.h"
 #include "./Guid.h"
 
-#include <OOCore/Preprocessor/Sequence.h>
+#include <Omega/Preprocessor/Sequence.h>
 
 class OmegaObject
 {
