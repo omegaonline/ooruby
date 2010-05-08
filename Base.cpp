@@ -36,10 +36,10 @@ public:
 	static VALUE Create(const guid_t& iid, IObject* pObject);
 
 	VALUE MethodCall(uint32_t method_idx, int argc, VALUE *argv);
-		
+
 private:
 	OmegaObject(const guid_t& iid, System::IProxy* pProxy, System::IMarshaller* pMarshaller, TypeInfo::IInterfaceInfo* pInfo) :
-		m_iid(iid), m_ptrProxy(pProxy), m_ptrMarshaller(pMarshaller), m_ptrInfo(pInfo)
+			m_iid(iid), m_ptrProxy(pProxy), m_ptrMarshaller(pMarshaller), m_ptrInfo(pInfo)
 	{}
 
 	static void Free(void* p);
@@ -71,7 +71,7 @@ private:
 			}
 			catch (IException* pE)
 			{
-				throw_exception(pE);		
+				throw_exception(pE);
 			}
 		}
 	};
@@ -88,7 +88,7 @@ std::map<guid_t,VALUE> OmegaObject::s_mapClasses;
 
 OmegaObject::ThunkPtr OmegaObject::GetThunk(uint32_t method_idx)
 {
-	static ThunkPtr thunks[] = 
+	static ThunkPtr thunks[] =
 	{
 		OMEGA_REPEAT(OMEGA_MAX_DEFINES,OUTPUT_THUNK)
 		0
@@ -118,11 +118,11 @@ VALUE OmegaObject::Create(const guid_t& iid, IObject* pObject)
 	// Now create an instance to hold it...
 	OmegaObject* pObj = 0;
 	OMEGA_NEW(pObj,OmegaObject(iid,ptrProxy,ptrMarshaller,ptrTI));
-	
+
 	return Data_Wrap_Struct(klass,NULL,&Free,pObj);
 }
 
-VALUE OmegaObject::QueryInterface(VALUE self, VALUE arg) 
+VALUE OmegaObject::QueryInterface(VALUE self, VALUE arg)
 {
 	Check_Type(self, T_DATA);
 	OmegaObject* pThis = (OmegaObject*)DATA_PTR(self);
@@ -130,7 +130,7 @@ VALUE OmegaObject::QueryInterface(VALUE self, VALUE arg)
 	return Qnil;
 }
 
-void OmegaObject::Free(void* p) 
+void OmegaObject::Free(void* p)
 {
 	delete static_cast<OmegaObject*>(p);
 }
@@ -222,7 +222,7 @@ void OmegaObject::WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wc
 		{
 			if (rb_obj_is_kind_of(param,s_classIObject) != Qtrue)
 				rb_raise(rb_eTypeError,"%s is not derived from Omega::IObject",rb_obj_classname(param));
-				
+
 			void* TODO;
 			break;
 		}
@@ -339,7 +339,7 @@ VALUE OmegaObject::ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName
 	}
 }
 
-VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv) 
+VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 {
 	string_t strName;
 	TypeInfo::MethodAttributes_t attribs;
@@ -357,10 +357,10 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 	m_ptrProxy->WriteKey(ptrParamsOut);
 	ptrParamsOut->WriteGuids(L"$iid",1,&m_iid);
 	ptrParamsOut->WriteUInt32s(L"$method_id",1,&method_idx);
-	
+
 	int ret_count = (return_type == TypeInfo::typeVoid ? 0 : 1);
 	int cur_arg = 0;
-	for (byte_t param_idx=0;param_idx<param_count;++param_idx)
+	for (byte_t param_idx=0; param_idx<param_count; ++param_idx)
 	{
 		string_t strName;
 		TypeInfo::Types_t type;
@@ -381,7 +381,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 
 			WriteVal(ptrParamsOut,argv[cur_arg++],strName.c_str(),type);
 		}
-		
+
 		if (attribs & TypeInfo::attrOut)
 			++ret_count;
 	}
@@ -412,8 +412,8 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 			else
 				rb_ary_push(retval,v);
 		}
-				
-		for (byte_t param_idx=0;param_idx<param_count;++param_idx)
+
+		for (byte_t param_idx=0; param_idx<param_count; ++param_idx)
 		{
 			string_t strName;
 			TypeInfo::Types_t type;
@@ -493,10 +493,10 @@ VALUE OmegaObject::GetInterfaceClass(const guid_t& iid, TypeInfo::IInterfaceInfo
 
 	// Now create the class under module
 	VALUE klass = rb_define_class_under(module,strName.Mid(start).ToUTF8().c_str(),base_type);
-	
+
 	// Now add all the methods...
 	uint32_t methods = pTI->GetMethodCount();
-	for (uint32_t method_idx = method_offset;method_idx<methods;++method_idx)
+	for (uint32_t method_idx = method_offset; method_idx<methods; ++method_idx)
 	{
 		TypeInfo::MethodAttributes_t attribs;
 		uint32_t timeout;

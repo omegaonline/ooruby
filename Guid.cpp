@@ -26,7 +26,7 @@ using namespace OTL;
 
 VALUE obj_guid_t;
 
-static void guid_t_free(void* p) 
+static void guid_t_free(void* p)
 {
 	delete static_cast<guid_t*>(p);
 }
@@ -43,12 +43,12 @@ static VALUE guid_t_new(int argc, VALUE *argv, VALUE klass)
 	{
 		guid_t* pg = 0;
 		OMEGA_NEW(pg,guid_t);
-	
+
 		if (argc == 1)
 			*pg = guid_t::FromString(strVal);
 		else
 			*pg = guid_t::Null();
-				
+
 		return Data_Wrap_Struct(klass,0,guid_t_free,pg);
 	}
 	catch (IException* pE)
@@ -68,7 +68,7 @@ guid_t val_to_guid(VALUE val)
 	if (rb_obj_is_kind_of(val,obj_guid_t) != Qtrue)
 		rb_raise(rb_eTypeError,"%s is not a Omega::Guid",rb_obj_classname(val));
 
-	return *(guid_t*)DATA_PTR(val);	
+	return *(guid_t*)DATA_PTR(val);
 }
 
 VALUE guid_to_val(const guid_t& g)
@@ -77,7 +77,7 @@ VALUE guid_to_val(const guid_t& g)
 	{
 		guid_t* pg = 0;
 		OMEGA_NEW(pg,guid_t(g));
-	
+
 		return Data_Wrap_Struct(obj_guid_t,0,guid_t_free,pg);
 	}
 	catch (IException* pE)

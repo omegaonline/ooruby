@@ -50,23 +50,23 @@ static VALUE omega_createinstance_i(int argc, VALUE *argv)
 
 	// Sort out URI
 	string_t strURI(STR2CSTR(argv[0]),false);
-	
+
 	// Sort out flags
 	Activation::Flags_t flags = Activation::Any;
 	if (argc >= 2)
 		flags = static_cast<Activation::Flags_t>(NUM2UINT(argv[1]));
-	
+
 	// Sort out pOuter
 	IObject* pOuter = 0;
 	if (argc >= 3)
 	{
 		// t = TYPE(argv[2]);
 	}
-	
+
 	// try to create the object asking for TypeInfo::IProvideObjectInfo
 	IObject* pObject = 0;
 	g_ptrApartment->CreateInstance(strURI,flags,pOuter,OMEGA_GUIDOF(TypeInfo::IProvideObjectInfo),pObject);
-	
+
 	ObjectPtr<TypeInfo::IProvideObjectInfo> ptrPOI;
 	ptrPOI.Attach(static_cast<TypeInfo::IProvideObjectInfo*>(pObject));
 	pObject = 0;
@@ -93,7 +93,7 @@ static VALUE omega_createinstance(int argc, VALUE *argv, VALUE /*klass*/)
 	}
 	catch (IException* pE)
 	{
-		throw_exception(pE);		
+		throw_exception(pE);
 	}
 }
 
