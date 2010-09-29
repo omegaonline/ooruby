@@ -1,0 +1,25 @@
+# Stuff we don't want to track
+
+# extconf.rb stuff
+Makefile
+
+# Windows stuff
+*.exe
+*.dll
+*.def
+
+# msvc stuff
+*.obj
+*.[ip]db
+*.lib
+*.intermediate.manifest
+*.embed.manifest
+*.pch
+*.res
+*.exp
+*.ncb
+*.ilk
+*.vcproj.*.user
+*.suo
+BuildLog.htm
+mt.dep
