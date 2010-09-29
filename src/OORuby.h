@@ -22,7 +22,7 @@
 /////////////////////////////////////////////////
 // Include Omega/OTL components
 
-#include <Omega/Apartment.h>
+#include <Omega/Compartment.h>
 
 #include <OTL/OTL.h>
 
@@ -43,7 +43,7 @@
 /////////////////////////////////////////////////
 // Include Ruby components
 
-#include "ruby.h"
+#include <ruby.h>
 
 #if !defined(HAVE_LONG_LONG)
 #error Your platform has no support for 64-bit numbers
@@ -56,4 +56,4 @@
 NORETURN(void throw_exception(Omega::IException* pE));
 
 // Global apartment
-extern OTL::ObjectPtr<Omega::Apartment::IApartment> g_ptrApartment;
+extern OTL::ObjectPtr<Omega::Compartment::ICompartment> g_ptrCompartment;

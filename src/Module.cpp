@@ -31,7 +31,7 @@ using namespace OTL;
 BEGIN_LIBRARY_OBJECT_MAP()
 END_LIBRARY_OBJECT_MAP()
 
-ObjectPtr<Apartment::IApartment> g_ptrApartment;
+ObjectPtr<Compartment::ICompartment> g_ptrCompartment;
 
 void throw_exception(IException* pE)
 {
@@ -65,7 +65,7 @@ static VALUE omega_createinstance_i(int argc, VALUE *argv)
 
 	// try to create the object asking for TypeInfo::IProvideObjectInfo
 	IObject* pObject = 0;
-	g_ptrApartment->CreateInstance(strURI,flags,pOuter,OMEGA_GUIDOF(TypeInfo::IProvideObjectInfo),pObject);
+	g_ptrCompartment->CreateInstance(strURI,flags,pOuter,OMEGA_GUIDOF(TypeInfo::IProvideObjectInfo),pObject);
 
 	ObjectPtr<TypeInfo::IProvideObjectInfo> ptrPOI;
 	ptrPOI.Attach(static_cast<TypeInfo::IProvideObjectInfo*>(pObject));
@@ -100,7 +100,7 @@ static VALUE omega_createinstance(int argc, VALUE *argv, VALUE /*klass*/)
 void module_init()
 {
 	// Create an apartment for all our stuff...
-	g_ptrApartment.Attach(Apartment::IApartment::Create());
+	g_ptrCompartment.Attach(Compartment::ICompartment::Create());
 
 	// Define our module
 	VALUE mod_omega = rb_define_module("Omega");
@@ -117,6 +117,6 @@ void module_init()
 
 void module_term()
 {
-	g_ptrApartment.Release();
+	g_ptrCompartment.Release();
 }
 

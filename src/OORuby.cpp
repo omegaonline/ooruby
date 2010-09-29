@@ -51,11 +51,10 @@ extern "C" void OMEGA_EXPORT Init_OORuby()
 	Omega::IException* pE = Omega::Initialize();
 	if (pE)
 	{
-		std::string strSrc = pE->GetSource().ToUTF8();
-		std::string strDesc = pE->GetDescription().ToUTF8();
+		std::string strDesc = pE->GetDescription().ToNative();
 		pE->Release();
 
-		rb_fatal("Omega exception returned by Omega::Initialize. %s.  Source: %s",strDesc.c_str(),strSrc.c_str());
+		rb_fatal("Omega exception returned by Omega::Initialize. %s",strDesc.c_str());
 	}
 
 	// Register a terminator
@@ -69,10 +68,9 @@ extern "C" void OMEGA_EXPORT Init_OORuby()
 	}
 	catch (Omega::IException* pE)
 	{
-		std::string strSrc = pE->GetSource().ToUTF8();
-		std::string strDesc = pE->GetDescription().ToUTF8();
+		std::string strDesc = pE->GetDescription().ToNative();
 		pE->Release();
 
-		rb_fatal("Omega exception returned by Omega::Initialize. %s.  Source: %s",strDesc.c_str(),strSrc.c_str());
+		rb_fatal("Omega exception returned by Omega::Initialize. %s",strDesc.c_str());
 	}
 }
