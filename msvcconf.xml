@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<MsvcConf>
+  <Project Name="OORuby">
+    <Configuration Name="Debug">
+      <Platform Name="Win32">
+        <Include Name="vld.h" Optional="true" Define="HAVE_VLD_H" />
+        <Library Name="vld.lib" Optional="true" />
+      </Platform>
+    </Configuration>
+    
+    <Include Name="ruby.h" />
+    <Include Name="ruby/config.h" />
+    <Library Name="msvcr90-ruby191-static.lib" />
+
+    <Include Name="Omega/Omega.h" />
+    <Configuration Name="Debug">
+      <Library Name="Debug/OOCore.lib" />
+    </Configuration>
+    <Configuration Name="Release">
+      <Library Name="bin/OOCore.lib" />
+    </Configuration>
+  </Project>
+</MsvcConf>

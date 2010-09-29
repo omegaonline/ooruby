@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="9.00"
-	Name="OORuby_vc8"
+	Name="OORuby"
 	ProjectGUID="{35EEBF6E-166F-4954-8505-EC4263782C99}"
 	RootNamespace="OORuby"
 	Keyword="Win32Proj"
@@ -19,14 +19,14 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory="..\..\bin\$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			CharacterSet="1"
+			CharacterSet="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
 				Description="Configuring project settings..."
-				CommandLine="msvc_conf_vc8.exe &quot;$(SolutionPath)&quot; $(ProjectName)"
+				CommandLine="msvcconf_vc9.exe &quot;$(SolutionPath)&quot; $(ProjectName)"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\include;C:\Ruby\lib\ruby\1.8\i386-mswin32_80"
+				AdditionalIncludeDirectories="..\..\oocore\include;&quot;C:\Program Files\Visual Leak Detector\include&quot;;C:\Ruby192\include\ruby-1.9.1;C:\Ruby192\include\ruby-1.9.1\i386-mswin32_90"
 				PreprocessorDefinitions="HAVE_VLD_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -68,7 +68,7 @@
 				AdditionalDependencies="C:\Ruby\lib\msvcr80-ruby18.lib"
 				OutputFile="$(OutDir)\$(ProjectName).so"
 				LinkIncremental="2"
-				AdditionalLibraryDirectories=""
+				AdditionalLibraryDirectories="&quot;C:\Program Files\Visual Leak Detector\lib&quot;;C:\Ruby192\lib"
 				GenerateDebugInformation="true"
 				SubSystem="2"
 				RandomizedBaseAddress="1"
@@ -100,15 +100,15 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory="..\..\bin"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(PlatformName)\$(ConfigurationName)"
 			ConfigurationType="2"
-			CharacterSet="1"
+			CharacterSet="0"
 			WholeProgramOptimization="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
 				Description="Configuring project settings..."
-				CommandLine="msvc_conf_vc8.exe &quot;$(SolutionPath)&quot; $(ProjectName)"
+				CommandLine="msvcconf_vc9.exe &quot;$(SolutionPath)&quot; $(ProjectName)"
 			/>
 			<Tool
 				Name="VCCustomBuildTool"
