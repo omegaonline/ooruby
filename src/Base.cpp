@@ -38,7 +38,7 @@ public:
 	VALUE MethodCall(uint32_t method_idx, int argc, VALUE *argv);
 
 private:
-	OmegaObject(const guid_t& iid, System::IProxy* pProxy, System::IMarshaller* pMarshaller, TypeInfo::IInterfaceInfo* pInfo) :
+	OmegaObject(const guid_t& iid, Remoting::IProxy* pProxy, Remoting::IMarshaller* pMarshaller, TypeInfo::IInterfaceInfo* pInfo) :
 			m_iid(iid), m_ptrProxy(pProxy), m_ptrMarshaller(pMarshaller), m_ptrInfo(pInfo)
 	{}
 
@@ -46,12 +46,12 @@ private:
 	static VALUE QueryInterface(VALUE self, VALUE arg);
 	static VALUE GetInterfaceClass(const guid_t& iid, TypeInfo::IInterfaceInfo* pII, uint32_t& method_offset);
 
-	VALUE ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName, TypeInfo::Types_t type);
-	void WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wchar_t* strName, TypeInfo::Types_t type);
+	VALUE ReadVal(Remoting::IMessage* pParamsIn, const string_t& strName, TypeInfo::Type_t type);
+	void WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const string_t& strName, TypeInfo::Type_t type);
 
 	guid_t                              m_iid;
-	ObjectPtr<System::IProxy>           m_ptrProxy;
-	ObjectPtr<System::IMarshaller>      m_ptrMarshaller;
+	ObjectPtr<Remoting::IProxy>           m_ptrProxy;
+	ObjectPtr<Remoting::IMarshaller>      m_ptrMarshaller;
 	ObjectPtr<TypeInfo::IInterfaceInfo> m_ptrInfo;
 
 	static VALUE                   s_classIObject;
@@ -95,7 +95,7 @@ OmegaObject::ThunkPtr OmegaObject::GetThunk(uint32_t method_idx)
 	};
 
 	if (method_idx >= OMEGA_MAX_DEFINES)
-		OMEGA_THROW(L"Too many methods in interface!");
+		OMEGA_THROW("Too many methods in interface!");
 
 	return thunks[method_idx];
 }
@@ -103,9 +103,9 @@ OmegaObject::ThunkPtr OmegaObject::GetThunk(uint32_t method_idx)
 VALUE OmegaObject::Create(const guid_t& iid, IObject* pObject)
 {
 	// Confirm we can QI for all the interfaces we need...
-	ObjectPtr<System::IProxy> ptrProxy(pObject);
+	ObjectPtr<Remoting::IProxy> ptrProxy(pObject);
 
-	ObjectPtr<System::IMarshaller> ptrMarshaller;
+	ObjectPtr<Remoting::IMarshaller> ptrMarshaller;
 	ptrMarshaller.Attach(ptrProxy->GetMarshaller());
 
 	ObjectPtr<TypeInfo::IInterfaceInfo> ptrII;
@@ -135,7 +135,7 @@ void OmegaObject::Free(void* p)
 	delete static_cast<OmegaObject*>(p);
 }
 
-void OmegaObject::WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wchar_t* strName, TypeInfo::Types_t type)
+void OmegaObject::WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const string_t& strName, TypeInfo::Type_t type)
 {
 	switch (type & TypeInfo::typeMask)
 	{
@@ -228,15 +228,15 @@ void OmegaObject::WriteVal(Remoting::IMessage* pParamsOut, VALUE param, const wc
 		}
 
 	case TypeInfo::typeVoid:
-		OMEGA_THROW(L"Attempting to marshall void type!");
+		OMEGA_THROW("Attempting to marshal void type!");
 
 	case TypeInfo::typeUnknown:
 	default:
-		OMEGA_THROW(L"Attempting to marshall unknown type!");
+		OMEGA_THROW("Attempting to marshal unknown type!");
 	}
 }
 
-VALUE OmegaObject::ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName, TypeInfo::Types_t type)
+VALUE OmegaObject::ReadVal(Remoting::IMessage* pParamsIn, const string_t& strName, TypeInfo::Type_t type)
 {
 	switch (type & TypeInfo::typeMask)
 	{
@@ -327,15 +327,15 @@ VALUE OmegaObject::ReadVal(Remoting::IMessage* pParamsIn, const wchar_t* strName
 	case TypeInfo::typeObject:
 		{
 			void* TODO;
-			OMEGA_THROW(L"GAH!");
+			OMEGA_THROW("GAH!");
 		}
 
 	case TypeInfo::typeVoid:
-		OMEGA_THROW(L"Attempting to marshall void type!");
+		OMEGA_THROW("Attempting to marshal void type!");
 
 	case TypeInfo::typeUnknown:
 	default:
-		OMEGA_THROW(L"Attempting to marshall unknown type!");
+		OMEGA_THROW("Attempting to marshal unknown type!");
 	}
 }
 
@@ -345,7 +345,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 	TypeInfo::MethodAttributes_t attribs;
 	uint32_t timeout;
 	byte_t param_count;
-	TypeInfo::Types_t return_type;
+	TypeInfo::Type_t return_type;
 
 	m_ptrTypeInfo->GetMethodInfo(method_idx,strName,attribs,timeout,param_count,return_type);
 
@@ -363,7 +363,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 	for (byte_t param_idx=0; param_idx<param_count; ++param_idx)
 	{
 		string_t strName;
-		TypeInfo::Types_t type;
+		TypeInfo::Type_t type;
 		TypeInfo::ParamAttributes_t attribs;
 		m_ptrTypeInfo->GetParamInfo(method_idx,param_idx,strName,type,attribs);
 
@@ -376,7 +376,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 			{
 				// Array handling...
 				void* TODO;
-				OMEGA_THROW(L"GAH!");
+				OMEGA_THROW("GAH!");
 			}
 
 			WriteVal(ptrParamsOut,argv[cur_arg++],strName.c_str(),type);
@@ -416,7 +416,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 		for (byte_t param_idx=0; param_idx<param_count; ++param_idx)
 		{
 			string_t strName;
-			TypeInfo::Types_t type;
+			TypeInfo::Type_t type;
 			TypeInfo::ParamAttributes_t attribs;
 			m_ptrTypeInfo->GetParamInfo(method_idx,param_idx,strName,type,attribs);
 
@@ -427,7 +427,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 				{
 					// Array handling...
 					void* TODO;
-					OMEGA_THROW(L"GAH!");
+					OMEGA_THROW("GAH!");
 				}
 				else
 					v = ReadVal(pParamsIn,strName.c_str(),type);
@@ -445,7 +445,7 @@ VALUE OmegaObject::MethodCall(uint32_t method_idx, int argc, VALUE *argv)
 
 VALUE OmegaObject::GetInterfaceClass(const guid_t& iid, TypeInfo::IInterfaceInfo* pII, uint32_t& method_offset)
 {
-	// See if we have had is before
+	// See if we have had it before
 	try
 	{
 		std::map<guid_t,VALUE>::iterator i = s_mapClasses.find(iid);
@@ -501,7 +501,7 @@ VALUE OmegaObject::GetInterfaceClass(const guid_t& iid, TypeInfo::IInterfaceInfo
 		TypeInfo::MethodAttributes_t attribs;
 		uint32_t timeout;
 		byte_t param_count;
-		TypeInfo::Types_t return_type;
+		TypeInfo::Type_t return_type;
 
 		pTI->GetMethodInfo(method_idx,strName,attribs,timeout,param_count,return_type);
 

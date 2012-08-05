@@ -27,19 +27,14 @@ using namespace OTL;
 #include "./Guid.h"
 #include "./Base.h"
 
-// Our library map
-BEGIN_LIBRARY_OBJECT_MAP()
-END_LIBRARY_OBJECT_MAP()
-
 ObjectPtr<Compartment::ICompartment> g_ptrCompartment;
 
 void throw_exception(IException* pE)
 {
-	std::string strSrc = pE->GetSource().ToUTF8();
-	std::string strDesc = pE->GetDescription().ToUTF8();
+	std::string strDesc = pE->GetDescription().ToNative();
 	pE->Release();
 
-	rb_fatal("Omega exception thrown: %s.  Source: %s",strDesc.c_str(),strSrc.c_str());
+	rb_fatal("Omega exception thrown: %s",strDesc.c_str());
 }
 
 static VALUE omega_createinstance_i(int argc, VALUE *argv)
@@ -49,7 +44,7 @@ static VALUE omega_createinstance_i(int argc, VALUE *argv)
 		rb_raise(rb_eArgError,"Invalid number of arguments supplied");
 
 	// Sort out URI
-	string_t strURI(STR2CSTR(argv[0]),false);
+	string_t strURI(rb_string_value_cstr(argv[0]),false);
 
 	// Sort out flags
 	Activation::Flags_t flags = Activation::Any;
@@ -80,7 +75,7 @@ static VALUE omega_createinstance_i(int argc, VALUE *argv)
 	guid_t iid;
 	ptrEG->Next(count,&iid);
 	if (count==0)
-		OMEGA_THROW(L"Object has no scriptable interfaces!");
+		OMEGA_THROW("Object has no scriptable interfaces!");
 
 	return create_instance(iid,ptrPOI);
 }

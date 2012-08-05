@@ -26,6 +26,10 @@
 #include <vld.h>
 #endif
 
+// Our library map
+BEGIN_LIBRARY_OBJECT_MAP()
+END_LIBRARY_OBJECT_MAP()
+
 // This allows us to register a clean-up function for the extension
 static void register_terminator(void (*term_fn)())
 {
@@ -36,7 +40,7 @@ static void register_terminator(void (*term_fn)())
 }
 
 // The extension exit point
-void Term_OORuby()
+static void Term_OORuby()
 {
 	module_term();
 
@@ -58,13 +62,11 @@ extern "C" void OMEGA_EXPORT Init_OORuby()
 	}
 
 	// Register a terminator
-	register_terminator(Term_OORuby);
+	register_terminator(&Term_OORuby);
 
 	try
 	{
 		module_init();
-
-
 	}
 	catch (Omega::IException* pE)
 	{
